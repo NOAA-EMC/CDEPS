@@ -21,7 +21,6 @@ module datm_datamode_cfsr_mod
   public  :: datm_datamode_cfsr_advance
   public  :: datm_datamode_cfsr_restart_write
   public  :: datm_datamode_cfsr_restart_read
-  private :: datm_eSat  ! determine saturation vapor pressure
 
   ! export state data
   real(r8), pointer :: Sa_z(:)              => null()
