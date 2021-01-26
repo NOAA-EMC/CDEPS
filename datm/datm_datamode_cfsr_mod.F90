@@ -21,7 +21,6 @@ module datm_datamode_cfsr_mod
   public  :: datm_datamode_cfsr_advance
   public  :: datm_datamode_cfsr_restart_write
   public  :: datm_datamode_cfsr_restart_read
-!  private :: datm_eSat  ! determine saturation vapor pressure
 
   ! export state data
   real(r8), pointer :: Sa_z(:)              => null()
@@ -32,7 +31,7 @@ module datm_datamode_cfsr_mod
   real(r8), pointer :: Sa_pbot(:)           => null()
   real(r8), pointer :: Faxa_lwdn(:)         => null()
   real(r8), pointer :: Faxa_rain(:)         => null()
-  real(r8), pointer :: Faxa_snow(:)        => null()
+  real(r8), pointer :: Faxa_snow(:)         => null()
   real(r8), pointer :: Faxa_swndr(:)        => null()
   real(r8), pointer :: Faxa_swndf(:)        => null()
   real(r8), pointer :: Faxa_swvdr(:)        => null()
@@ -114,7 +113,6 @@ contains
     ! initialize pointers for module level stream arrays
     call shr_strdata_get_stream_pointer( sdat, 'Sa_mask'   , strm_mask , rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
     ! get export state pointers
     call dshr_state_getfldptr(exportState, 'Sa_z'       , fldptr1=Sa_z       , rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -130,7 +128,7 @@ contains
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Faxa_rain'  , fldptr1=Faxa_rain  , rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    call dshr_state_getfldptr(exportState, 'Faxa_snow' , fldptr1=Faxa_snow, rc=rc)
+    call dshr_state_getfldptr(exportState, 'Faxa_snow'  , fldptr1=Faxa_snow  , rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Faxa_swvdr' , fldptr1=Faxa_swvdr , rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -189,13 +187,6 @@ contains
     end if
 
     do n = 1, lsize
-       !--- bottom layer height ---
-!       Sa_z(n) = 10.0_r8
-
-       !--- calculate wind speed ---
-!       if (associated(Sa_wspd)) then
-!         Sa_wspd(n) = sqrt(Sa_u(n)*Sa_u(n)+Sa_v(n)*Sa_v(n)) 
-!       end if
 
        !--- temperature ---
        if (tbotmax < 50.0_r8) Sa_tbot(n) = Sa_tbot(n) + tkFrz
@@ -205,43 +196,8 @@ contains
     end do
 
     !----------------------------------------------------------
-    ! unit conversions (temporal resolution is hourly)
+    ! unit conversions (temporal resolution is 6-hourly)
     !----------------------------------------------------------
-
-    ! convert J/m^2 to W/m^2
-    !Faxa_lwdn(:) = Faxa_lwdn(:)/3600.0_r8
-!    Faxa_lwdn(:) = Faxa_lwdn(:)/21600.0_r8
-!    if (associated(Faxa_lwnet)) then
-!      Faxa_lwnet(:) = Faxa_lwnet(:)/3600.0_r8
-!    end if
-!    Faxa_swdn(:) = Faxa_swdn(:)/3600.0_r8
-!    Faxa_swdn(:) = Faxa_swdn(:)/21600.0_r8
-    !Faxa_swvdr(:) = Faxa_swvdr(:)/3600.0_r8
-    !Faxa_swndr(:) = Faxa_swndr(:)/3600.0_r8
-    !Faxa_swvdf(:) = Faxa_swvdf(:)/3600.0_r8
-    !Faxa_swndf(:) = Faxa_swndf(:)/3600.0_r8
-!    Faxa_swvdr(:) = Faxa_swvdr(:)/21600.0_r8
-!    Faxa_swndr(:) = Faxa_swndr(:)/21600.0_r8
-!    Faxa_swvdf(:) = Faxa_swvdf(:)/21600.0_r8
-!    Faxa_swndf(:) = Faxa_swndf(:)/21600.0_r8
-!    Faxa_swnet(:) = Faxa_swnet(:)/3600.0_r8
-!    Faxa_sen(:) = Faxa_sen(:)/3600.0_r8
-!    Faxa_lat(:) = Faxa_lat(:)/3600.0_r8
-
-    ! convert m to kg/m^2/s
-    !Faxa_rain(:) = Faxa_rain(:)/3600.0_r8*rhofw
-!    Faxa_rain(:) = Faxa_rain(:)/21600.0_r8*rhofw
-!    Faxa_rainc(:) = Faxa_rainc(:)/3600.0_r8*rhofw
-!    Faxa_rainl(:) = Faxa_rainl(:)/3600.0_r8*rhofw
-!    Faxa_snowc(:) = Faxa_snowc(:)/3600.0_r8*rhofw
-    !Faxa_snow(:) = Faxa_snow(:)/3600.0_r8*rhofw
-!    Faxa_snow(:) = Faxa_snow(:)/21600.0_r8*rhofw
-
-    ! convert N/m^2 s to N/m^2
-!    Faxa_taux(:) = Faxa_taux(:)/3600.0_r8
-!    Faxa_tauy(:) = Faxa_tauy(:)/3600.0_r8
-!    Faxa_taux(:) = Faxa_taux(:)/21600.0_r8
-!    Faxa_tauy(:) = Faxa_tauy(:)/21600.0_r8
 
   end subroutine datm_datamode_cfsr_advance
 
