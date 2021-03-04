@@ -164,7 +164,6 @@ contains
     integer                     , intent(in)             :: io_type
     integer                     , intent(in)             :: io_format
     character(len=*)            , intent(in)             :: compname
-    character(len=*), optional  , intent(in)             :: xmlfilename
     integer                     , intent(out)            :: rc
 
     ! local variables
