@@ -124,6 +124,7 @@ contains
 
   subroutine shr_stream_init_from_xml(xmlfilename, streamdat, isroot_task, logunit, &
                                       pio_subsystem, io_type, io_format, compname, rc)
+
     use FoX_DOM, only : extractDataContent, destroy, Node, NodeList, parseFile, getElementsByTagname
     use FoX_DOM, only : getLength, item
     use ESMF, only : ESMF_VM, ESMF_VMGetCurrent, ESMF_VMBroadCast, ESMF_SUCCESS

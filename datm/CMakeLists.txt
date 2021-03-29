@@ -8,6 +8,7 @@ set(SRCFILES atm_comp_nuopc.F90
              datm_datamode_cfsr_mod.F90
              datm_datamode_era5_mod.F90)
 
+
 foreach(FILE ${SRCFILES})
   if(EXISTS "${CASEROOT}/SourceMods/src.datm/${FILE}")
     list(REMOVE_ITEM SRCFILES ${FILE})
@@ -27,3 +28,4 @@ target_include_directories (datm PRIVATE ${CMAKE_SOURCE_DIR})
 target_include_directories (datm PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/share)
 target_include_directories (datm PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/streams)
 target_include_directories (datm PRIVATE ${PIO_Fortran_INCLUDE_DIR})
+target_include_directories (datm PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../fox/include)
