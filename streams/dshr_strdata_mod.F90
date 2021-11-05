@@ -12,7 +12,9 @@ module dshr_strdata_mod
   use ESMF             , only : ESMF_TimeIntervalGet, ESMF_TYPEKIND_R8, ESMF_FieldCreate
   use ESMF             , only : ESMF_FILEFORMAT_ESMFMESH, ESMF_FieldCreate
   use ESMF             , only : ESMF_FieldBundleCreate, ESMF_MESHLOC_ELEMENT, ESMF_FieldBundleAdd
-  use ESMF             , only : ESMF_POLEMETHOD_ALLAVG, ESMF_EXTRAPMETHOD_NEAREST_STOD, ESMF_REGRIDMETHOD_BILINEAR, ESMF_REGRIDMETHOD_NEAREST_STOD
+  use ESMF             , only : ESMF_POLEMETHOD_ALLAVG, ESMF_EXTRAPMETHOD_NEAREST_STOD
+  use ESMF             , only : ESMF_REGRIDMETHOD_BILINEAR, ESMF_REGRIDMETHOD_NEAREST_STOD
+  use ESMF             , only : ESMF_REGRIDMETHOD_CONSERVE, ESMF_NORMTYPE_FRACAREA, ESMF_NORMTYPE_DSTAREA
   use ESMF             , only : ESMF_ClockGet, operator(-), operator(==), ESMF_CALKIND_NOLEAP
   use ESMF             , only : ESMF_FieldReGridStore, ESMF_FieldRedistStore, ESMF_UNMAPPEDACTION_IGNORE
   use ESMF             , only : ESMF_TERMORDER_SRCSEQ, ESMF_FieldRegrid, ESMF_FieldFill
@@ -522,6 +524,8 @@ contains
              sdat%pstrm(ns)%field_stream = ESMF_FieldCreate(stream_mesh, &
                   ESMF_TYPEKIND_r8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
              if (chkerr(rc,__LINE__,u_FILE_u)) return
+             call ESMF_FieldFill(sdat%pstrm(ns)%field_stream, dataFillScheme="const", const1=1.0_r8, rc=rc)
+             if (chkerr(rc,__LINE__,u_FILE_u)) return
           end if
        endif
 
@@ -552,6 +556,24 @@ contains
              call ESMF_FieldReGridStore(sdat%pstrm(ns)%field_stream, lfield_dst, &
                   routehandle=sdat%pstrm(ns)%routehandle, &
                   regridmethod=ESMF_REGRIDMETHOD_NEAREST_STOD, &
+                  dstMaskValues = (/0/), &  ! ignore destination points where the mask is 0
+                  srcMaskValues = (/0/), &  ! ignore source points where the mask is 0
+                  srcTermProcessing=srcTermProcessing_Value, ignoreDegenerate=.true., &
+                  unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=rc)
+          else if (trim(sdat%stream(ns)%mapalgo) == 'consf') then
+             call ESMF_FieldReGridStore(sdat%pstrm(ns)%field_stream, lfield_dst, &
+                  routehandle=sdat%pstrm(ns)%routehandle, &
+                  regridmethod=ESMF_REGRIDMETHOD_CONSERVE, &
+                  normType=ESMF_NORMTYPE_FRACAREA, &
+                  dstMaskValues = (/0/), &  ! ignore destination points where the mask is 0
+                  srcMaskValues = (/0/), &  ! ignore source points where the mask is 0
+                  srcTermProcessing=srcTermProcessing_Value, ignoreDegenerate=.true., &
+                  unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=rc)
+          else if (trim(sdat%stream(ns)%mapalgo) == 'consd') then
+             call ESMF_FieldReGridStore(sdat%pstrm(ns)%field_stream, lfield_dst, &
+                  routehandle=sdat%pstrm(ns)%routehandle, &
+                  regridmethod=ESMF_REGRIDMETHOD_CONSERVE, &
+                  normType=ESMF_NORMTYPE_DSTAREA, &
                   dstMaskValues = (/0/), &  ! ignore destination points where the mask is 0
                   srcMaskValues = (/0/), &  ! ignore source points where the mask is 0
                   srcTermProcessing=srcTermProcessing_Value, ignoreDegenerate=.true., &
@@ -1342,6 +1364,7 @@ contains
     character(*), parameter  :: subname = '(shr_strdata_readstrm) '
     character(*), parameter  :: F00   = "('(shr_strdata_readstrm) ',8a)"
     character(*), parameter  :: F02   = "('(shr_strdata_readstrm) ',2a,i8)"
+    character(CL)            :: errmsg
     !-------------------------------------------------------------------------------
 
     rc = ESMF_SUCCESS
@@ -1490,6 +1513,12 @@ contains
                 call shr_sys_abort(' ERROR: reading in variable: '// trim(per_stream%fldlist_stream(nf)))
              end if
              if (handlefill) then
+                ! Single point streams are not allowed to have missing values
+                if (stream%mapalgo == 'none' .and. any(data_real2d == fillvalue_r4)) then
+                   write(errmsg,*) ' ERROR: _Fillvalue found in stream input variable: '// trim(per_stream%fldlist_stream(nf))
+                   if(sdat%masterproc) write(sdat%logunit,*) trim(errmsg)
+                   call shr_sys_abort(errmsg)
+                endif
                 do lev = 1,stream_nlev
                    do n = 1,size(dataptr2d, dim=2)
                       if (.not. shr_infnan_isnan(data_real2d(n,lev)) .and. data_real2d(n,lev) .ne. fillvalue_r4) then
@@ -1516,6 +1545,13 @@ contains
                 call shr_sys_abort(' ERROR: reading in variable: '// trim(per_stream%fldlist_stream(nf)))
              end if
              if (handlefill) then
+                ! Single point streams are not allowed to have missing values
+                if (stream%mapalgo == 'none' .and. any(data_real1d == fillvalue_r4)) then
+                   write(errmsg,*) ' ERROR: _Fillvalue found in stream input variable: '// trim(per_stream%fldlist_stream(nf))
+                   if(sdat%masterproc) write(sdat%logunit,*) trim(errmsg)
+                   call shr_sys_abort(errmsg)
+                endif
+
                 do n=1,size(dataptr1d)
                    if(.not. shr_infnan_isnan(data_real1d(n)) .and. data_real1d(n) .ne. fillvalue_r4) then
                       dataptr1d(n) = real(data_real1d(n), kind=r8)
@@ -1542,6 +1578,12 @@ contains
                 call shr_sys_abort(' ERROR: reading in 2d double variable: '// trim(per_stream%fldlist_stream(nf)))
              end if
              if (handlefill) then
+                ! Single point streams are not allowed to have missing values
+                if (stream%mapalgo == 'none' .and. any(data_dbl2d == fillvalue_r8)) then
+                   write(errmsg,*) ' ERROR: _Fillvalue found in stream input variable: '// trim(per_stream%fldlist_stream(nf))
+                   if(sdat%masterproc) write(sdat%logunit,*) trim(errmsg)
+                   call shr_sys_abort(errmsg)
+                endif
                 do lev = 1,stream_nlev
                    do n = 1,size(dataptr2d, dim=2)
                       if (.not. shr_infnan_isnan(data_dbl2d(n,lev)) .and. data_dbl2d(n,lev) .ne. fillvalue_r8) then
@@ -1568,6 +1610,12 @@ contains
                 call shr_sys_abort(' ERROR: reading in variable: '// trim(per_stream%fldlist_stream(nf)))
              end if
              if (handlefill) then
+                ! Single point streams are not allowed to have missing values
+                if (stream%mapalgo == 'none' .and. any(data_dbl1d == fillvalue_r8)) then
+                   write(errmsg,*) ' ERROR: _Fillvalue found in stream input variable: '// trim(per_stream%fldlist_stream(nf))
+                   if(sdat%masterproc) write(sdat%logunit,*) trim(errmsg)
+                   call shr_sys_abort(errmsg)
+                endif
                 do n = 1,size(dataptr1d)
                    if (.not. shr_infnan_isnan(data_dbl1d(n)) .and. data_dbl1d(n) .ne. fillvalue_r8) then
                       dataptr1d(n) = data_dbl1d(n)
