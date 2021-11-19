@@ -458,7 +458,7 @@ contains
     type(ESMF_Time)         :: nextTime
     type(ESMF_TimeInterval) :: timeStep
     real(r8)                :: nextsw_cday
-    logical                 :: restart_write         ! restart alarm is ringing
+    logical                 :: restart_write ! restart alarm is ringing
     integer                 :: next_ymd      ! model date
     integer                 :: next_tod      ! model sec into model date
     integer                 :: yr, mon, day  ! year, month, day
