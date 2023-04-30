@@ -5,7 +5,6 @@ module datm_datamode_gfs_hafs_mod
   use shr_kind_mod     , only : r8=>shr_kind_r8, i8=>shr_kind_i8, cl=>shr_kind_cl, cs=>shr_kind_cs
   use shr_sys_mod      , only : shr_sys_abort
   use shr_precip_mod   , only : shr_precip_partition_rain_snow_ramp
-  use shr_mpi_mod      , only : shr_mpi_max
   use shr_const_mod    , only : shr_const_tkfrz, shr_const_rhofw, shr_const_rdair
   use dshr_methods_mod , only : dshr_state_getfldptr, chkerr
   use dshr_strdata_mod , only : shr_strdata_type, shr_strdata_get_stream_pointer
@@ -36,10 +35,12 @@ module datm_datamode_gfs_hafs_mod
   real(r8), pointer :: Faxd_rain(:)         => null()
 
   ! stream data
-  real(r8), pointer :: strm_mask(:)         => null()
+  !real(r8), pointer :: strm_mask(:)         => null()
+  real(r8), pointer :: strm_rain(:)         => null()
 
-  real(r8) :: tbotmax ! units detector
-  real(r8) :: maskmax ! units detector
+  !real(r8) :: tbotmax ! units detector
+  !real(r8) :: maskmax ! units detector
+  real(r8) :: rain_min ! rain value detector
 
   real(r8) , parameter :: tKFrz    = SHR_CONST_TKFRZ
   real(r8) , parameter :: rdair    = SHR_CONST_RDAIR ! dry air gas constant ~ J/K/kg
@@ -107,7 +108,8 @@ contains
     rc = ESMF_SUCCESS
 
     ! initialize pointers for module level stream arrays
-    call shr_strdata_get_stream_pointer( sdat, 'Sa_mask'   , strm_mask , rc)
+    !call shr_strdata_get_stream_pointer( sdat, 'Sa_mask'   , strm_mask , rc)
+    call shr_strdata_get_stream_pointer( sdat, 'Faxd_rain'   , strm_rain , rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     ! get export state pointers
@@ -138,6 +140,7 @@ contains
 
   !===============================================================================
   subroutine datm_datamode_gfs_hafs_advance(exportstate, mainproc, logunit, mpicom, target_ymd, target_tod, model_calendar, rc)
+  use ESMF, only: ESMF_VMGetCurrent, ESMF_VMAllReduce, ESMF_REDUCE_MIN, ESMF_VM
 
     ! input/output variables
     type(ESMF_State)       , intent(inout) :: exportState
@@ -153,25 +156,39 @@ contains
     logical  :: first_time = .true.
     integer  :: n                   ! indices
     integer  :: lsize               ! size of attr vect
-    real(r8) :: rtmp
-    real(r8) :: tbot, pbot
+    real(r8) :: rtmp(2)
+    type(ESMF_VM) :: vm
     character(len=*), parameter :: subname='(datm_datamode_gfs_hafs_advance): '
     !-------------------------------------------------------------------------------
 
     rc = ESMF_SUCCESS
 
-    lsize = size(strm_mask)
+    lsize = size(strm_rain)
 
     if (first_time) then
+       call ESMF_VMGetCurrent(vm, rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       ! determine minimum Faxd_rain (see below for use)
+       rtmp(1) = minval(strm_rain(:))
+       call ESMF_VMAllReduce(vm, rtmp, rtmp(2:), 1, ESMF_REDUCE_MIN, rc=rc)
+       rain_min = rtmp(2)
+       !if (mainproc) write(logunit,*) trim(subname),' tbotmax = ',tbotmax
+       if (mainproc) write(logunit,*) trim(subname),' rain_min = ',rain_min
+
+       ! reset first_time
+       first_time = .false.
+    end if
 !
 !       determine maskmax (see below for use)
 !       rtmp = maxval(strm_mask(:))
 !       call shr_mpi_max(rtmp, maskmax, mpicom, 'datm_mask', all=.true.)
 !       if (mainproc) write(logunit,*) trim(subname),' maskmax = ',maskmax
-!
-       ! reset first_time
-       first_time = .false.
-    end if
+    do n = 1, lsize
+       !--- Faxd_rain is positive ---
+       if (associated(Faxd_rain)) then
+         if (rain_min < 0.0_r8) Faxd_rain(n) = max(0.0_r8,Faxd_rain(n))
+       end if
+    end do
 
   end subroutine datm_datamode_gfs_hafs_advance
 
