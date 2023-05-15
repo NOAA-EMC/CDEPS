@@ -22,7 +22,7 @@ module datm_datamode_gfs_hafs_mod
   public  :: datm_datamode_gfs_hafs_restart_read
 
   ! export state data
-!  real(r8), pointer :: Sd_pslv(:)           => null()
+  real(r8), pointer :: Sd_pslv(:)           => null()
   real(r8), pointer :: Faxd_swvdr(:)        => null()
   real(r8), pointer :: Faxd_swvdf(:)        => null()
   real(r8), pointer :: Faxd_swndr(:)        => null()
@@ -35,11 +35,8 @@ module datm_datamode_gfs_hafs_mod
   real(r8), pointer :: Faxd_rain(:)         => null()
 
   ! stream data
-  !real(r8), pointer :: strm_mask(:)         => null()
   real(r8), pointer :: strm_rain(:)         => null()
 
-  !real(r8) :: tbotmax ! units detector
-  !real(r8) :: maskmax ! units detector
   real(r8) :: rain_min ! rain value detector
 
   real(r8) , parameter :: tKFrz    = SHR_CONST_TKFRZ
@@ -71,7 +68,7 @@ contains
     rc = ESMF_SUCCESS
 
     call dshr_fldList_add(fldsExport, trim(flds_scalar_name))
-!    call dshr_fldList_add(fldsExport, 'Sd_pslv'    )
+    call dshr_fldList_add(fldsExport, 'Sd_pslv'    )
     call dshr_fldList_add(fldsExport, 'Faxd_swvdr'  )
     call dshr_fldList_add(fldsExport, 'Faxd_swvdf'  )
     call dshr_fldList_add(fldsExport, 'Faxd_swndr' )
@@ -113,8 +110,8 @@ contains
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     ! get export state pointers
-!    call dshr_state_getfldptr(exportState, 'Sd_pslv'    , fldptr1=Sd_pslv    , rc=rc)
-!    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    call dshr_state_getfldptr(exportState, 'Sd_pslv'    , fldptr1=Sd_pslv    , rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Faxd_swvdr' , fldptr1=Faxd_swvdr , rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Faxd_swvdf' , fldptr1=Faxd_swvdf , rc=rc)
