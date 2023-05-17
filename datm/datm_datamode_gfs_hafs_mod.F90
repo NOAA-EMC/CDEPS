@@ -175,11 +175,7 @@ contains
        ! reset first_time
        first_time = .false.
     end if
-!
-!       determine maskmax (see below for use)
-!       rtmp = maxval(strm_mask(:))
-!       call shr_mpi_max(rtmp, maskmax, mpicom, 'datm_mask', all=.true.)
-!       if (mainproc) write(logunit,*) trim(subname),' maskmax = ',maskmax
+
     do n = 1, lsize
        !--- Faxd_rain is positive ---
        if (associated(Faxd_rain)) then
