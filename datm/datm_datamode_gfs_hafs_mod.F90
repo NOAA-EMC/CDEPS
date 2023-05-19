@@ -23,6 +23,8 @@ module datm_datamode_gfs_hafs_mod
 
   ! export state data
   real(r8), pointer :: Sd_pslv(:)           => null()
+  real(r8), pointer :: Sd_u10m(:)           => null()
+  real(r8), pointer :: Sd_v10m(:)           => null()
   real(r8), pointer :: Faxd_swvdr(:)        => null()
   real(r8), pointer :: Faxd_swvdf(:)        => null()
   real(r8), pointer :: Faxd_swndr(:)        => null()
@@ -69,6 +71,8 @@ contains
 
     call dshr_fldList_add(fldsExport, trim(flds_scalar_name))
     call dshr_fldList_add(fldsExport, 'Sd_pslv'    )
+    call dshr_fldList_add(fldsExport, 'Sd_u10m'    )
+    call dshr_fldList_add(fldsExport, 'Sd_v10m'    )
     call dshr_fldList_add(fldsExport, 'Faxd_swvdr'  )
     call dshr_fldList_add(fldsExport, 'Faxd_swvdf'  )
     call dshr_fldList_add(fldsExport, 'Faxd_swndr' )
@@ -111,6 +115,10 @@ contains
 
     ! get export state pointers
     call dshr_state_getfldptr(exportState, 'Sd_pslv'    , fldptr1=Sd_pslv    , rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    call dshr_state_getfldptr(exportState, 'Sd_u10m'    , fldptr1=Sd_u10m    , rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    call dshr_state_getfldptr(exportState, 'Sd_v10m'    , fldptr1=Sd_v10m    , rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Faxd_swvdr' , fldptr1=Faxd_swvdr , rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -169,7 +177,6 @@ contains
        rtmp(1) = minval(strm_rain(:))
        call ESMF_VMAllReduce(vm, rtmp, rtmp(2:), 1, ESMF_REDUCE_MIN, rc=rc)
        rain_min = rtmp(2)
-       !if (mainproc) write(logunit,*) trim(subname),' tbotmax = ',tbotmax
        if (mainproc) write(logunit,*) trim(subname),' rain_min = ',rain_min
 
        ! reset first_time
