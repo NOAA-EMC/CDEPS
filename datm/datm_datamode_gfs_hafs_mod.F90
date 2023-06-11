@@ -55,12 +55,13 @@ contains
 !===============================================================================
 
   subroutine datm_datamode_gfs_hafs_advertise(exportState, fldsexport, &
-       flds_scalar_name, rc)
+       flds_scalar_name, datamode, rc)
 
     ! input/output variables
     type(esmf_State)   , intent(inout) :: exportState
     type(fldlist_type) , pointer       :: fldsexport
     character(len=*)   , intent(in)    :: flds_scalar_name
+    character(len=*)   , intent(in)    :: datamode
     integer            , intent(out)   :: rc
 
     ! local variables
@@ -71,8 +72,6 @@ contains
 
     call dshr_fldList_add(fldsExport, trim(flds_scalar_name))
     call dshr_fldList_add(fldsExport, 'Sd_pslv'    )
-    call dshr_fldList_add(fldsExport, 'Sd_u10m'    )
-    call dshr_fldList_add(fldsExport, 'Sd_v10m'    )
     call dshr_fldList_add(fldsExport, 'Faxd_swvdr'  )
     call dshr_fldList_add(fldsExport, 'Faxd_swvdf'  )
     call dshr_fldList_add(fldsExport, 'Faxd_swndr' )
@@ -83,6 +82,10 @@ contains
     call dshr_fldList_add(fldsExport, 'Faxd_sen'    )
     call dshr_fldList_add(fldsExport, 'Faxd_lat'    )
     call dshr_fldList_add(fldsExport, 'Faxd_rain'   )
+    if(trim(datamode) == 'GFS_HAFS_WW3') then
+       call dshr_fldList_add(fldsExport, 'Sd_u10m'    )
+       call dshr_fldList_add(fldsExport, 'Sd_v10m'    )
+    end if
 
     fldlist => fldsExport ! the head of the linked list
     do while (associated(fldlist))
@@ -95,11 +98,12 @@ contains
   end subroutine datm_datamode_gfs_hafs_advertise
 
   !===============================================================================
-  subroutine datm_datamode_gfs_hafs_init_pointers(exportState, sdat, rc)
+  subroutine datm_datamode_gfs_hafs_init_pointers(exportState, sdat, datamode, rc)
 
     ! input/output variables
     type(ESMF_State)       , intent(inout) :: exportState
     type(shr_strdata_type) , intent(in)    :: sdat
+    character(len=*)       , intent(in)    :: datamode
     integer                , intent(out)   :: rc
 
     ! local variables
@@ -114,11 +118,13 @@ contains
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     ! get export state pointers
+    if(trim(datamode) == 'GFS_HAFS_WW3') then
+       call dshr_state_getfldptr(exportState, 'Sd_u10m'    , fldptr1=Sd_u10m    , rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       call dshr_state_getfldptr(exportState, 'Sd_v10m'    , fldptr1=Sd_v10m    , rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    end if
     call dshr_state_getfldptr(exportState, 'Sd_pslv'    , fldptr1=Sd_pslv    , rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    call dshr_state_getfldptr(exportState, 'Sd_u10m'    , fldptr1=Sd_u10m    , rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    call dshr_state_getfldptr(exportState, 'Sd_v10m'    , fldptr1=Sd_v10m    , rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Faxd_swvdr' , fldptr1=Faxd_swvdr , rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
