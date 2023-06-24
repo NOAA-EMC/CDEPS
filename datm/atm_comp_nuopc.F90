@@ -359,7 +359,7 @@ contains
          trim(datamode) == 'GEFS'         .or. &
          trim(datamode) == 'CFSR'         .or. &
          trim(datamode) == 'GFS'          .or. &
-         trim(datamode(1:8)) == 'GFS_HAFS'     .or. &
+         datamode(1:8)  == 'GFS_HAFS'     .or. &
          trim(datamode) == 'ERA5') then
     else
        call shr_sys_abort(' ERROR illegal datm datamode = '//trim(datamode))
