@@ -41,6 +41,12 @@ module cdeps_dice_comp
   use dice_datamode_ssmi_mod , only : dice_datamode_ssmi_advance
   use dice_datamode_ssmi_mod , only : dice_datamode_ssmi_restart_read
   use dice_datamode_ssmi_mod , only : dice_datamode_ssmi_restart_write
+  !
+  use dice_datamode_cplhist_mod , only : dice_datamode_cplhist_advertise
+  use dice_datamode_cplhist_mod , only : dice_datamode_cplhist_init_pointers
+  use dice_datamode_cplhist_mod , only : dice_datamode_cplhist_advance
+  use dice_datamode_cplhist_mod , only : dice_datamode_cplhist_restart_read
+  use dice_datamode_cplhist_mod , only : dice_datamode_cplhist_restart_write
 
   implicit none
   private ! except
@@ -266,7 +272,7 @@ contains
     flux_Qacc0 = rbcasttmp(3)
 
     ! Validate datamode
-    if ( trim(datamode) == 'ssmi' .or. trim(datamode) == 'ssmi_iaf') then
+    if ( trim(datamode) == 'ssmi' .or. trim(datamode) == 'ssmi_iaf' or trim(datamode) == 'cplhist') then
        if (my_task == main_task) write(logunit,*) ' dice datamode = ',trim(datamode)
     else
        call shr_sys_abort(' ERROR illegal dice datamode = '//trim(datamode))
@@ -277,9 +283,14 @@ contains
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     read(cvalue,*) flds_i2o_per_cat  ! module variable
 
+    !datamode already validated
     select case (trim(datamode))
-    case('ssmi', 'ssmi_iaf')
+    case('ssmi','ssmi_iaf')
        call dice_datamode_ssmi_advertise(importState, exportState, fldsimport, fldsexport, &
+            flds_scalar_name, flds_i2o_per_cat, rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    case('cplhist')
+       call dice_datamode_cplhist_advertise(importState, exportState, fldsimport, fldsexport, &
             flds_scalar_name, flds_i2o_per_cat, rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
     end select
@@ -489,15 +500,20 @@ contains
 
     if (first_time) then
 
-       ! Initialize dfields with export state data that has corresponding stream field
+       ! Initialize dfields with export state data that has corresponding stream fieldi
+       if ( trim(datamode) == 'ssmi' .or. trim(datamode) == 'ssmi_iaf') then
        call dshr_dfield_add(dfields, sdat, state_fld='Si_ifrac', strm_fld='Si_ifrac', &
             state=exportState, logunit=logunit, mainproc=mainproc, rc=rc)
        if (chkerr(rc,__LINE__,u_FILE_u)) return
+       end if
 
        ! Initialize datamode module ponters
        select case (trim(datamode))
        case('ssmi', 'ssmi_iaf')
           call dice_datamode_ssmi_init_pointers(importState, exportState, sdat, flds_i2o_per_cat, rc)
+          if (chkerr(rc,__LINE__,u_FILE_u)) return
+       case('cplhist')
+          call dice_datamode_cplhist_init_pointers(importState,exportState,sdat,rc)
           if (chkerr(rc,__LINE__,u_FILE_u)) return
        end select
 
@@ -506,6 +522,8 @@ contains
           select case (trim(datamode))
           case('ssmi', 'ssmi_iaf')
              call dice_datamode_ssmi_restart_read(restfilm, inst_suffix, logunit, my_task, mpicom, sdat)
+          case('cplhist')
+             call dice_datamode_cplhist_restart_read(rest_filem, inst_suffix, logunit, my_task, mpicom, sdat) 
           end select
        end if
 
@@ -546,14 +564,21 @@ contains
        call dice_datamode_ssmi_advance(exportState, importState, cosarg, flds_i2o_per_cat, &
             flux_swpf, flux_Qmin, flux_Qacc, flux_Qacc0, dt, logunit, restart_read, rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    case ('cplhist')
+       call dice_datamode_cplhist_advance(rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return 
     end select
 
     ! Write restarts if needed
+    ! TODO - no rc returned
     if (restart_write) then
        select case (trim(datamode))
        case('ssmi', 'ssmi_iaf')
           call dice_datamode_ssmi_restart_write(case_name, inst_suffix, target_ymd, target_tod, &
                logunit, my_task, sdat)
+          if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       case ('cplhist')
+          call dice_datamode_cplhist_restart_write(case_name, inst_suffix, ymd, tod, logunit, my_task, sdat)
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
        end select
     end if
