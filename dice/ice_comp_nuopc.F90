@@ -272,7 +272,7 @@ contains
     flux_Qacc0 = rbcasttmp(3)
 
     ! Validate datamode
-    if ( trim(datamode) == 'ssmi' .or. trim(datamode) == 'ssmi_iaf' or trim(datamode) == 'cplhist') then
+    if ( trim(datamode) == 'ssmi' .or. trim(datamode) == 'ssmi_iaf' .or. trim(datamode) == 'cplhist') then
        if (my_task == main_task) write(logunit,*) ' dice datamode = ',trim(datamode)
     else
        call shr_sys_abort(' ERROR illegal dice datamode = '//trim(datamode))
@@ -290,8 +290,7 @@ contains
             flds_scalar_name, flds_i2o_per_cat, rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
     case('cplhist')
-       call dice_datamode_cplhist_advertise(importState, exportState, fldsimport, fldsexport, &
-            flds_scalar_name, flds_i2o_per_cat, rc)
+       call dice_datamode_cplhist_advertise(exportState, fldsexport, flds_scalar_name, rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
     end select
 
@@ -523,7 +522,7 @@ contains
           case('ssmi', 'ssmi_iaf')
              call dice_datamode_ssmi_restart_read(restfilm, inst_suffix, logunit, my_task, mpicom, sdat)
           case('cplhist')
-             call dice_datamode_cplhist_restart_read(rest_filem, inst_suffix, logunit, my_task, mpicom, sdat) 
+             call dice_datamode_cplhist_restart_read(restfilm, inst_suffix, logunit, my_task, mpicom, sdat) 
           end select
        end if
 
@@ -578,7 +577,7 @@ contains
                logunit, my_task, sdat)
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
        case ('cplhist')
-          call dice_datamode_cplhist_restart_write(case_name, inst_suffix, ymd, tod, logunit, my_task, sdat)
+          call dice_datamode_cplhist_restart_write(case_name, inst_suffix, target_ymd, target_tod, logunit, my_task, sdat)
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
        end select
     end if

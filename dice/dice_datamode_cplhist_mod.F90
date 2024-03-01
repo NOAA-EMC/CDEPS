@@ -80,7 +80,7 @@ contains
     do while (associated(fldlist))
        call NUOPC_Advertise(exportState, standardName=fldlist%stdname, rc=rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
-       call ESMF_LogWrite('(dice_comp_advertise): Fr_ocn'//trim(fldList%stdname), ESMF_LOGMSG_INFO)
+       call ESMF_LogWrite('(dice_comp_advertise): Fr_ice'//trim(fldList%stdname), ESMF_LOGMSG_INFO)
        fldList => fldList%next
     enddo
 
