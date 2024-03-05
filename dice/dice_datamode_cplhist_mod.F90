@@ -22,6 +22,7 @@ module dice_datamode_cplhist_mod
   ! export fields
   ! ice to atm in CMEPS/mediator/esmFldsExchange_ufs_mod.F90
   real(r8), pointer :: Si_ifrac(:)  => null()
+  real(r8), pointer :: Si_imask(:)  => null()
   real(r8), pointer :: Faii_taux(:)      => null()
   real(r8), pointer :: Faii_tauy(:)      => null()
   real(r8), pointer :: Faii_lat(:)      => null()
@@ -62,6 +63,7 @@ contains
     ! Advertise export fields
     call dshr_fldList_add(fldsExport, trim(flds_scalar_name))
     call dshr_fldList_add(fldsExport, 'Si_ifrac'            )
+    call dshr_fldList_add(fldsExport, 'Si_imask'            )
     call dshr_fldList_add(fldsExport, 'Faii_taux'           )
     call dshr_fldList_add(fldsExport, 'Faii_tauy'           )
     call dshr_fldList_add(fldsExport, 'Faii_lat'            )
@@ -103,6 +105,8 @@ contains
 
     ! initialize pointers to export fields
     call dshr_state_getfldptr(exportState, 'Si_ifrac' , fldptr1=Si_ifrac , rc=rc)
+    if (chkerr(rc,__LINE__,u_FILE_u)) return
+    call dshr_state_getfldptr(exportState, 'Si_imask' , fldptr1=Si_imask , rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Faii_taux'     , fldptr1=Faii_taux     , rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return

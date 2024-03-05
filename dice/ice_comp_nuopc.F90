@@ -182,6 +182,7 @@ contains
     integer           :: bcasttmp(4)
     real(r8)          :: rbcasttmp(3)
     type(ESMF_VM)     :: vm
+    logical           :: isPresent, isSet
     character(len=*),parameter  :: subname=trim(modName)//':(InitializeAdvertise) '
     character(*)    ,parameter :: F00 = "('(" // trim(modName) // ") ',8a)"
     character(*)    ,parameter :: F01 = "('(" // trim(modName) // ") ',a,2x,i8)"
@@ -279,9 +280,11 @@ contains
     endif
 
     ! Advertise import and export fields
-    call NUOPC_CompAttributeGet(gcomp, name='flds_i2o_per_cat', value=cvalue, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    read(cvalue,*) flds_i2o_per_cat  ! module variable
+    if ( trim(datamode) == 'ssmi' .or. trim(datamode) == 'ssmi_iaf') then 
+      call NUOPC_CompAttributeGet(gcomp, name='flds_i2o_per_cat', value=cvalue, rc=rc)
+      if (ChkErr(rc,__LINE__,u_FILE_u)) return
+      if (isPresent .and. isSet) read(cvalue,*) flds_i2o_per_cat  ! module variable
+    endif
 
     !datamode already validated
     select case (trim(datamode))
