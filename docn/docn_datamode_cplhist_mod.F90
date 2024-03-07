@@ -118,7 +118,8 @@ contains
 
     rc = ESMF_SUCCESS
 
-    So_t(:) = So_t(:) + TkFrz
+    !If need unit conversion for So_t (C-->K)
+    !So_t(:) = So_t(:) + TkFrz
 
   end subroutine docn_datamode_cplhist_advance
 
