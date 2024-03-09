@@ -3,7 +3,7 @@ module dice_datamode_cplhist_mod
   use ESMF             , only : ESMF_State, ESMF_LOGMSG_INFO, ESMF_LogWrite, ESMF_SUCCESS
   use NUOPC            , only : NUOPC_Advertise
   use shr_kind_mod     , only : r8=>shr_kind_r8, i8=>shr_kind_i8, cl=>shr_kind_cl, cs=>shr_kind_cs
-  !use shr_const_mod    , only : shr_const_TkFrz, shr_const_pi, shr_const_ocn_ref_sal
+  use shr_const_mod    , only : shr_const_TkFrzsw
   use shr_sys_mod      , only : shr_sys_abort
   use dshr_methods_mod , only : dshr_state_getfldptr, dshr_fldbun_getfldptr, chkerr
   use dshr_fldlist_mod , only : fldlist_type, dshr_fldlist_add
@@ -151,7 +151,9 @@ contains
 
     rc = ESMF_SUCCESS
 
-    ! For now - do nothing special
+    !Unit conversions, calculations,....
+    !Where aice=0, Si_t=0K (as missing value). Interpolation in time between ice that comes or goes then has issues
+    where(Si_t .LT. 10) Si_t = shr_const_TkFrzsw
 
   end subroutine dice_datamode_cplhist_advance
 
