@@ -119,7 +119,9 @@ contains
     rc = ESMF_SUCCESS
 
     !If need unit conversion for So_t (C-->K)
-    !So_t(:) = So_t(:) + TkFrz
+    if (minval(So_t) .LT. 100.0_r8) then !Assume input SST in Celsius
+      So_t(:) = So_t(:) + TkFrz
+    endif
 
   end subroutine docn_datamode_cplhist_advance
 
