@@ -96,10 +96,11 @@ contains
     call dshr_state_getfldptr(exportState, 'So_bldepth', fldptr1=So_bldepth, allowNullReturn=.true., rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
 
-    So_u(:) = 0.0_r8
-    So_v(:) = 0.0_r8
-    So_t(:) = TkFrz
-    So_bldepth(:) = 0.0_r8
+    !Allocation depends on exchanged fields, so check before filling arrays with values here
+    if (associated(So_u)) So_u(:) = 0.0_r8
+    if (associated(So_v)) So_v(:) = 0.0_r8
+    if (associated(So_t)) So_t(:) = TkFrz
+    if (associated(So_bldepth)) So_bldepth(:) = 0.0_r8
 
     ! Set export state ocean fraction (So_omask)
     So_omask(:) = ocn_fraction(:)
@@ -107,9 +108,10 @@ contains
   end subroutine docn_datamode_cplhist_init_pointers
 
   !===============================================================================
-  subroutine docn_datamode_cplhist_advance(rc)
+  subroutine docn_datamode_cplhist_advance(sst_constant_value, rc)
 
     ! input/output variables
+    real(r8), optional, intent(in) :: sst_constant_value
     integer, intent(out)   :: rc
 
     ! local variables
@@ -118,9 +120,14 @@ contains
 
     rc = ESMF_SUCCESS
 
-    !If need unit conversion for So_t (C-->K)
-    if (minval(So_t) .LT. 100.0_r8) then !Assume input SST in Celsius
-      So_t(:) = So_t(:) + TkFrz
+    !If need unit conversion for So_t (C-->K),
+    !use existing nml variable sst_constant_value to signal units of input
+    !i.e., 0-->Celsius, 273.15-->K
+    
+    if (present(sst_constant_value)) then
+      if(sst_constant_value .LT. 10.0_r8) then !Assume input SST in Celsius
+        So_t(:) = So_t(:) + TkFrz
+      endif
     endif
 
   end subroutine docn_datamode_cplhist_advance

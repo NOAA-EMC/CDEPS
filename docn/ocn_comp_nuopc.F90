@@ -605,7 +605,7 @@ contains
        call  docn_datamode_aquaplanet_advance(exportState, model_mesh, sst_constant_value=sst_constant_value, rc=rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
     case('cplhist')
-       call  docn_datamode_cplhist_advance(rc=rc)
+       call  docn_datamode_cplhist_advance(sst_constant_value=sst_constant_value, rc=rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
     end select
 
