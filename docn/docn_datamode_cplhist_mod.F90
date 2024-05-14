@@ -115,6 +115,7 @@ contains
     integer, intent(out)   :: rc
 
     ! local variables
+    logical                     :: units_CToK = .true. ! true => convert SST in C to K
     character(len=*), parameter :: subname='(docn_datamode_cplhist_advance): '
     !-------------------------------------------------------------------------------
 
@@ -125,9 +126,13 @@ contains
     !i.e., 0-->Celsius, 273.15-->K
     
     if (present(sst_constant_value)) then
-      if(sst_constant_value .LT. 10.0_r8) then !Assume input SST in Celsius
-        So_t(:) = So_t(:) + TkFrz
+      if(sst_constant_value .GT. 230.0_r8) then !interpret input SST in K
+        units_CToK = .false. !in K already, don't convert
       endif
+    endif
+
+    if (units_CToK) then
+      So_t(:) = So_t(:) + TkFrz
     endif
 
   end subroutine docn_datamode_cplhist_advance
