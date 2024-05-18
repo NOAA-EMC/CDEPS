@@ -108,7 +108,7 @@ contains
     if (chkerr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Si_imask' , fldptr1=Si_imask , rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
-    call dshr_state_getfldptr(exportState, 'Faii_taux'     , fldptr1=Faii_taux     , rc=rc)
+    call dshr_state_getfldptr(exportState, 'Faii_taux'     , fldptr1=Faii_taux     , allowNullReturn=.true., rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Faii_tauy'     , fldptr1=Faii_tauy     , allowNullReturn=.true., rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
