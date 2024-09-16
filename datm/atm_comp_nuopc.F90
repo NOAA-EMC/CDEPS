@@ -75,24 +75,6 @@ module cdeps_datm_comp
   use datm_datamode_gefs_mod    , only : datm_datamode_gefs_advance
   use datm_datamode_gefs_mod    , only : datm_datamode_gefs_restart_write
   use datm_datamode_gefs_mod    , only : datm_datamode_gefs_restart_read
-
-  use datm_datamode_cfsr_mod    , only : datm_datamode_cfsr_advertise
-  use datm_datamode_cfsr_mod    , only : datm_datamode_cfsr_init_pointers
-  use datm_datamode_cfsr_mod    , only : datm_datamode_cfsr_advance
-  use datm_datamode_cfsr_mod    , only : datm_datamode_cfsr_restart_write
-  use datm_datamode_cfsr_mod    , only : datm_datamode_cfsr_restart_read
-
-  use datm_datamode_gfs_mod    , only : datm_datamode_gfs_advertise
-  use datm_datamode_gfs_mod    , only : datm_datamode_gfs_init_pointers
-  use datm_datamode_gfs_mod    , only : datm_datamode_gfs_advance
-  use datm_datamode_gfs_mod    , only : datm_datamode_gfs_restart_write
-  use datm_datamode_gfs_mod    , only : datm_datamode_gfs_restart_read
-
-  use datm_datamode_gfs_hafs_mod    , only : datm_datamode_gfs_hafs_advertise
-  use datm_datamode_gfs_hafs_mod    , only : datm_datamode_gfs_hafs_init_pointers
-  use datm_datamode_gfs_hafs_mod    , only : datm_datamode_gfs_hafs_advance
-  use datm_datamode_gfs_hafs_mod    , only : datm_datamode_gfs_hafs_restart_write
-  use datm_datamode_gfs_hafs_mod    , only : datm_datamode_gfs_hafs_restart_read
   
   use datm_datamode_simple_mod  , only : datm_datamode_simple_advertise
   use datm_datamode_simple_mod  , only : datm_datamode_simple_init_pointers
@@ -379,9 +361,6 @@ contains
          trim(datamode) == 'CLMNCEP'      .or. &
          trim(datamode) == 'CPLHIST'      .or. &
          trim(datamode) == 'GEFS'         .or. &
-         trim(datamode) == 'CFSR'         .or. &
-         trim(datamode) == 'GFS'          .or. &
-         trim(datamode) == 'GFS_HAFS'     .or. &
          trim(datamode) == 'ERA5'         .or. &
          trim(datamode) == 'SIMPLE') then
     else
@@ -412,14 +391,6 @@ contains
     case ('GEFS')
        call datm_datamode_gefs_advertise(exportState, fldsExport, flds_scalar_name, rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    case ('CFSR')
-       call datm_datamode_cfsr_advertise(exportState, fldsExport, flds_scalar_name, rc)
-       if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    case ('GFS')
-       call datm_datamode_gfs_advertise(exportState, fldsExport, flds_scalar_name, rc)
-       if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    case ('GFS_HAFS')
-       call datm_datamode_gfs_hafs_advertise(exportState, fldsExport, flds_scalar_name, rc)
     case ('SIMPLE')
        call datm_datamode_simple_advertise(exportState, fldsExport, flds_scalar_name, &
             nlfilename, my_task, vm, rc)
@@ -664,14 +635,6 @@ contains
        case('GEFS')
           call datm_datamode_gefs_init_pointers(exportState, sdat, rc)
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
-       case('CFSR')
-          call datm_datamode_cfsr_init_pointers(exportState, sdat, rc)
-          if (ChkErr(rc,__LINE__,u_FILE_u)) return
-       case('GFS')
-          call datm_datamode_gfs_init_pointers(exportState, sdat, rc)
-          if (ChkErr(rc,__LINE__,u_FILE_u)) return
-       case('GFS_HAFS')
-          call datm_datamode_gfs_hafs_init_pointers(exportState, sdat, rc)
        case('SIMPLE')
           call datm_datamode_simple_init_pointers(exportState, sdat, rc)
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -692,12 +655,6 @@ contains
              call datm_datamode_era5_restart_read(restfilm, inst_suffix, logunit, my_task, mpicom, sdat)
           case('GEFS')
              call datm_datamode_gefs_restart_read(restfilm, inst_suffix, logunit, my_task, mpicom, sdat)
-          case('CFSR')
-             call datm_datamode_cfsr_restart_read(restfilm, inst_suffix, logunit, my_task, mpicom, sdat)
-          case('GFS')
-             call datm_datamode_gfs_restart_read(restfilm, inst_suffix, logunit, my_task, mpicom, sdat)
-          case('GFS_HAFS')
-             call datm_datamode_gfs_hafs_restart_read(restfilm, inst_suffix, logunit, my_task, mpicom, sdat)
           case('SIMPLE')
              call datm_datamode_simple_restart_read(restfilm, inst_suffix, logunit, my_task, mpicom, sdat)
           end select
@@ -751,17 +708,6 @@ contains
        call datm_datamode_gefs_advance(exportstate, mainproc, logunit, mpicom, target_ymd, &
             target_tod, sdat%model_calendar, rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    case('CFSR')
-       call datm_datamode_cfsr_advance(exportstate, mainproc, logunit, mpicom, target_ymd, &
-            target_tod, sdat%model_calendar, rc)
-       if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    case('GFS')
-       call datm_datamode_gfs_advance(exportstate, mainproc, logunit, mpicom, target_ymd, &
-            target_tod, sdat%model_calendar, rc)
-       if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    case('GFS_HAFS')
-       call datm_datamode_gfs_hafs_advance(exportstate, mainproc, logunit, mpicom, target_ymd, &
-            target_tod, sdat%model_calendar, rc)
     case('SIMPLE')
        call datm_datamode_simple_advance(target_ymd, target_tod, target_mon, &
             sdat%model_calendar, rc)
@@ -788,16 +734,6 @@ contains
                logunit, my_task, sdat)
        case('GEFS')
           call datm_datamode_gefs_restart_write(case_name, inst_suffix, target_ymd, target_tod, &
-               logunit, my_task, sdat)
-          if (ChkErr(rc,__LINE__,u_FILE_u)) return
-       case('CFSR')
-          call datm_datamode_cfsr_restart_write(case_name, inst_suffix, target_ymd, target_tod, &
-               logunit, my_task, sdat)
-       case('GFS')
-          call datm_datamode_gfs_restart_write(case_name, inst_suffix, target_ymd, target_tod, &
-               logunit, my_task, sdat)
-       case('GFS_HAFS')
-          call datm_datamode_gfs_hafs_restart_write(case_name, inst_suffix, target_ymd, target_tod, &
                logunit, my_task, sdat)
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
        case('SIMPLE')
