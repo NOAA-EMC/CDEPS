@@ -34,6 +34,7 @@ module docn_datamode_som_mod
   real(r8), pointer :: So_v(:)      => null()
   real(r8), pointer :: So_dhdx(:)   => null()
   real(r8), pointer :: So_dhdy(:)   => null()
+  real(r8), pointer :: So_bldepth(:)   => null()
   real(r8), pointer :: Fioo_q(:)    => null()
   real(r8), pointer :: So_fswpen(:) => null()
 
@@ -65,7 +66,6 @@ module docn_datamode_som_mod
   real(r8) , parameter :: ocnsalt = shr_const_ocn_ref_sal ! ocean reference salinity
 
   character(*) , parameter :: nullstr = 'null'
-  character(*) , parameter :: rpfile  = 'rpointer.ocn'
   character(*) , parameter :: u_FILE_u = &
        __FILE__
 
@@ -98,6 +98,7 @@ contains
     call dshr_fldList_add(fldsExport, 'So_v'                )
     call dshr_fldList_add(fldsExport, 'So_dhdx'             )
     call dshr_fldList_add(fldsExport, 'So_dhdy'             )
+    call dshr_fldList_add(fldsExport, 'So_bldepth'          )
     call dshr_fldList_add(fldsExport, 'Fioo_q'              )
     call dshr_fldList_add(fldsExport, 'So_fswpen'           )
 
@@ -188,6 +189,8 @@ contains
     call dshr_state_getfldptr(exportState, 'So_dhdx'    , fldptr1=So_dhdx    , rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'So_dhdy'    , fldptr1=So_dhdy    , rc=rc)
+    if (chkerr(rc,__LINE__,u_FILE_u)) return
+    call dshr_state_getfldptr(exportState, 'So_bldepth' , fldptr1=So_bldepth , rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Fioo_q'     , fldptr1=Fioo_q     , rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
@@ -289,6 +292,7 @@ contains
 
              ! save somtp to restart file
              somtp(n) = So_t(n)
+             So_bldepth(n) = strm_h(n)
           endif
        end do
        deallocate(tfreeze)
@@ -300,12 +304,13 @@ contains
   end subroutine docn_datamode_som_advance
 
   !===============================================================================
-  subroutine docn_datamode_som_restart_write(case_name, inst_suffix, ymd, tod, &
+  subroutine docn_datamode_som_restart_write(rpfile, case_name, inst_suffix, ymd, tod, &
        logunit, my_task, sdat)
 
     ! write restart file
 
     ! input/output variables
+    character(len=*)            , intent(in)    :: rpfile
     character(len=*)            , intent(in)    :: case_name
     character(len=*)            , intent(in)    :: inst_suffix
     integer                     , intent(in)    :: ymd       ! model date
@@ -314,32 +319,33 @@ contains
     integer                     , intent(in)    :: my_task
     type(shr_strdata_type)      , intent(inout) :: sdat
     !-------------------------------------------------------------------------------
-
+    integer :: rc
     call dshr_restart_write(rpfile, case_name, 'docn', inst_suffix, ymd, tod, &
-         logunit, my_task, sdat, fld=somtp, fldname='somtp')
+         logunit, my_task, sdat, rc, fld=somtp, fldname='somtp')
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
   end subroutine docn_datamode_som_restart_write
 
   !===============================================================================
-  subroutine docn_datamode_som_restart_read(rest_filem, inst_suffix, logunit, my_task, mpicom, sdat)
+  subroutine docn_datamode_som_restart_read(rest_filem, rpfile, logunit, my_task, mpicom, sdat)
 
     ! read restart file
 
     ! input/output arguments
     character(len=*)            , intent(inout) :: rest_filem
-    character(len=*)            , intent(in)    :: inst_suffix
+    character(len=*)            , intent(in)    :: rpfile
     integer                     , intent(in)    :: logunit
     integer                     , intent(in)    :: my_task
     integer                     , intent(in)    :: mpicom
     type(shr_strdata_type)      , intent(inout) :: sdat
     !-------------------------------------------------------------------------------
-
+    integer :: rc
     ! allocate module memory for restart fields that are read in
     allocate(somtp(sdat%model_lsize))
-
     ! read restart
-    call dshr_restart_read(rest_filem, rpfile, inst_suffix, nullstr, logunit, my_task, mpicom, sdat, &
+    call dshr_restart_read(rest_filem, rpfile, logunit, my_task, mpicom, sdat, rc,&
          fld=somtp, fldname='somtp')
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
   end subroutine docn_datamode_som_restart_read
 

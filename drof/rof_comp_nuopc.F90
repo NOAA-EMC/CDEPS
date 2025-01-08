@@ -27,7 +27,7 @@ module cdeps_drof_comp
   use shr_const_mod    , only : SHR_CONST_SPVAL
   use shr_sys_mod      , only : shr_sys_abort
   use shr_cal_mod      , only : shr_cal_ymd2date
-  use shr_log_mod     , only : shr_log_setLogUnit
+  use shr_log_mod      , only : shr_log_setLogUnit
   use dshr_methods_mod , only : dshr_state_getfldptr, dshr_state_diagnose, chkerr, memcheck
   use dshr_strdata_mod , only : shr_strdata_type, shr_strdata_advance, shr_strdata_get_stream_domain
   use dshr_strdata_mod , only : shr_strdata_init_from_config
@@ -36,6 +36,7 @@ module cdeps_drof_comp
   use dshr_mod         , only : dshr_restart_read, dshr_restart_write, dshr_mesh_init
   use dshr_dfield_mod  , only : dfield_type, dshr_dfield_add, dshr_dfield_copy
   use dshr_fldlist_mod , only : fldlist_type, dshr_fldlist_add, dshr_fldlist_realize
+  use nuopc_shr_methods, only : shr_get_rpointer_name
 
   implicit none
   private ! except
@@ -80,7 +81,6 @@ module cdeps_drof_comp
 
   logical                      :: diagnose_data = .true.
   integer      , parameter     :: main_task=0                       ! task number of main task
-  character(*) , parameter     :: rpfile = 'rpointer.rof'
 #ifdef CESMCOUPLED
   character(*) , parameter     :: modName =  "(rof_comp_nuopc)"
 #else
@@ -183,7 +183,7 @@ contains
 
     ! Obtain flds_scalar values, mpi values, multi-instance values and
     ! set logunit and set shr logging to my log file
-    call dshr_init(gcomp, 'ROF', sdat, mpicom, my_task, inst_index, inst_suffix, &
+    call dshr_init(gcomp, 'ROF', mpicom, my_task, inst_index, inst_suffix, &
          flds_scalar_name, flds_scalar_num, flds_scalar_index_nx, flds_scalar_index_ny, &
          logunit, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -311,7 +311,7 @@ contains
     call shr_cal_ymd2date(current_year, current_mon, current_day, current_ymd)
 
     ! Run drof
-    call drof_comp_run(exportstate, current_ymd, current_tod, restart_write=.false., rc=rc)
+    call drof_comp_run(gcomp, exportstate, current_ymd, current_tod, restart_write=.false., rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     ! Add scalars to export state
@@ -366,19 +366,20 @@ contains
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     ! run drof
-    call drof_comp_run(exportState, next_ymd, next_tod, restart_write, rc=rc)
+    call drof_comp_run(gcomp, exportState, next_ymd, next_tod, restart_write, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
   end subroutine ModelAdvance
 
   !===============================================================================
-  subroutine drof_comp_run(exportState, target_ymd, target_tod, restart_write, rc)
+  subroutine drof_comp_run(gcomp, exportState, target_ymd, target_tod, restart_write, rc)
 
     ! --------------------------
     ! advance drof
     ! --------------------------
 
     ! input/output variables:
+    type(ESMF_GridComp), intent(in)  :: gcomp
     type(ESMF_State) , intent(inout) :: exportState
     integer          , intent(in)    :: target_ymd       ! model date
     integer          , intent(in)    :: target_tod       ! model sec into model date
@@ -388,6 +389,7 @@ contains
     ! local variables
     logical :: first_time = .true.
     integer :: n
+    character(len=CL) :: rpfile
     character(*), parameter :: subName = "(drof_comp_run) "
     !-------------------------------------------------------------------------------
 
@@ -412,7 +414,10 @@ contains
 
        ! Read restart if needed
        if (restart_read .and. .not. skip_restart_read) then
-          call dshr_restart_read(restfilm, rpfile, inst_suffix, nullstr, logunit, my_task, mpicom, sdat)
+          call shr_get_rpointer_name(gcomp, 'rof', target_ymd, target_tod, rpfile, 'read', rc)
+          if (ChkErr(rc,__LINE__,u_FILE_u)) return
+          call dshr_restart_read(restfilm, rpfile, logunit, my_task, mpicom, sdat, rc=rc)
+          if (chkerr(rc,__LINE__,u_FILE_u)) return
        end if
 
        first_time = .false.
@@ -447,11 +452,13 @@ contains
 
     ! write restarts if needed
     if (restart_write) then
-       select case (trim(datamode))
-       case('copyall')
+       if(trim(datamode) .eq. 'copyall') then
+          call shr_get_rpointer_name(gcomp, 'rof', target_ymd, target_tod, rpfile, 'write', rc)
+          if (ChkErr(rc,__LINE__,u_FILE_u)) return
           call dshr_restart_write(rpfile, case_name, 'drof', inst_suffix, target_ymd, target_tod, &
-               logunit, my_task, sdat)
-       end select
+               logunit, my_task, sdat, rc)
+          if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       endif
     end if
 
     ! write diagnostics

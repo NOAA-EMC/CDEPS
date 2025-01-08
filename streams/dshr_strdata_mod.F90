@@ -21,7 +21,7 @@ module dshr_strdata_mod
   use ESMF             , only : ESMF_REGION_TOTAL, ESMF_FieldGet, ESMF_TraceRegionExit, ESMF_TraceRegionEnter
   use ESMF             , only : ESMF_LOGMSG_INFO, ESMF_LogWrite
   use shr_kind_mod     , only : r8=>shr_kind_r8, r4=>shr_kind_r4, i2=>shr_kind_I2
-  use shr_kind_mod     , only : cs=>shr_kind_cs, cl=>shr_kind_cl, cxx=>shr_kind_cxx
+  use shr_kind_mod     , only : cs=>shr_kind_cs, cl=>shr_kind_cl, cxx=>shr_kind_cxx, cx=>shr_kind_cx
   use shr_sys_mod      , only : shr_sys_abort
   use shr_const_mod    , only : shr_const_pi, shr_const_cDay, shr_const_spval
   use shr_cal_mod      , only : shr_cal_calendarname, shr_cal_timeSet
@@ -51,7 +51,7 @@ module dshr_strdata_mod
   use pio              , only : pio_inquire, pio_inq_varid, pio_inq_varndims, pio_inq_vardimid
   use pio              , only : pio_inq_dimlen, pio_inq_vartype, pio_inq_dimname, pio_inq_dimid
   use pio              , only : pio_double, pio_real, pio_int, pio_offset_kind, pio_get_var
-  use pio              , only : pio_read_darray, pio_setframe, pio_fill_double, pio_get_att
+  use pio              , only : pio_read_darray, pio_setframe, pio_fill_double, pio_get_att, pio_inq_att
   use pio              , only : PIO_BCAST_ERROR, PIO_RETURN_ERROR, PIO_NOERR, PIO_INTERNAL_ERROR, PIO_SHORT
 
   implicit none
@@ -94,6 +94,7 @@ module dshr_strdata_mod
      character(CL), allocatable          :: fldlist_stream(:)               ! names of stream file fields
      character(CL), allocatable          :: fldlist_model(:)                ! names of stream model fields
      integer                             :: stream_nlev                     ! number of vertical levels in stream
+     real(r8), allocatable               :: stream_vlevs(:)                 ! values of vertical levels in stream
      integer                             :: stream_lb                       ! index of the Lowerbound (LB) in fldlist_stream
      integer                             :: stream_ub                       ! index of the Upperbound (UB) in fldlist_stream
      type(ESMF_Field)                    :: field_stream                    ! a field on the stream data domain
@@ -389,7 +390,7 @@ contains
     character(CS)                :: calendar        ! calendar name
     integer                      :: ns              ! stream index
     integer                      :: m               ! generic index
-    character(CL)                :: fileName        ! generic file name
+    character(CX)                :: fileName        ! generic file name
     integer                      :: nfld            ! loop stream field index
     type(ESMF_Field)             :: lfield          ! temporary
     type(ESMF_Field)             :: lfield_dst      ! temporary
@@ -677,9 +678,12 @@ contains
     type(ESMF_VM)           :: vm
     type(file_desc_t)       :: pioid
     integer                 :: rcode
-    character(CL)           :: filename
+    character(CX)           :: filename
     integer                 :: dimid
+    type(var_desc_t)        :: varid
     integer                 :: stream_nlev
+    integer                 :: old_handle    ! previous setting of pio error handling
+    character(CS)           :: units
     character(*), parameter :: subname = '(shr_strdata_set_stream_domain) '
     ! ----------------------------------------------
 
@@ -694,14 +698,31 @@ contains
        if (sdat%mainproc) then
           call shr_stream_getData(sdat%stream(stream_index), 1, filename)
        end if
-       call ESMF_VMBroadCast(vm, filename, CL, 0, rc=rc)
+       call ESMF_VMBroadCast(vm, filename, CX, 0, rc=rc)
        rcode = pio_openfile(sdat%pio_subsystem, pioid, sdat%io_type, trim(filename), pio_nowrite)
        rcode = pio_inq_dimid(pioid, trim(sdat%stream(stream_index)%lev_dimname), dimid)
        rcode = pio_inq_dimlen(pioid, dimid, stream_nlev)
+       allocate(sdat%pstrm(stream_index)%stream_vlevs(stream_nlev))
+       rcode = pio_inq_varid(pioid, trim(sdat%stream(stream_index)%lev_dimname), varid)
+       rcode = pio_get_var(pioid, varid, sdat%pstrm(stream_index)%stream_vlevs)
+
+       ! Determine vertical coordinates units - assume that default is m
+       call pio_seterrorhandling(pioid, PIO_BCAST_ERROR, old_handle)
+       rcode = pio_inq_att(pioid, varid, 'units')
+       call pio_seterrorhandling(pioid, old_handle)
+       if (rcode == PIO_NOERR) then
+          rcode = pio_get_att(pioid, varid, 'units', units)
+          if (trim(units) == 'centimeters' .or. trim(units) == 'cm') then
+             sdat%pstrm(stream_index)%stream_vlevs(:) = sdat%pstrm(stream_index)%stream_vlevs(:) / 100.
+          end if
+       end if
        call pio_closefile(pioid)
     end if
     if (sdat%mainproc) then
        write(sdat%stream(1)%logunit,*) trim(subname)//' stream_nlev = ',stream_nlev
+       if (stream_nlev /= 1) then
+          write(sdat%stream(1)%logunit,*)' stream vertical levels = ',sdat%pstrm(stream_index)%stream_vlevs
+       end if
     end if
 
     ! Set stream_nlev in the per-stream sdat info
@@ -726,7 +747,7 @@ contains
     type(var_desc_t)        :: varid
     type(file_desc_t)       :: pioid
     integer                 :: rcode
-    character(CL)           :: filename
+    character(CX)           :: filename
     type(io_desc_t)         :: pio_iodesc
     real(r4), allocatable   :: data_real(:)
     real(r8), allocatable   :: data_double(:)
@@ -743,7 +764,7 @@ contains
     if (sdat%mainproc) then
        call shr_stream_getData(sdat%stream(stream_index), 1, filename)
     end if
-    call ESMF_VMBroadCast(vm, filename, CL, 0, rc=rc)
+    call ESMF_VMBroadCast(vm, filename, CX, 0, rc=rc)
 
     ! Open the file
     rcode = pio_openfile(sdat%pio_subsystem, pioid, sdat%io_type, trim(filename), pio_nowrite)
@@ -1305,10 +1326,10 @@ contains
     real(r8)                             :: rDateM,rDateLB,rDateUB  ! model,LB,UB dates with fractional days
     integer                              :: n_lb, n_ub
     integer                              :: i
-    character(CL)                        :: filename_lb
-    character(CL)                        :: filename_ub
-    character(CL)                        :: filename_next
-    character(CL)                        :: filename_prev
+    character(CX)                        :: filename_lb
+    character(CX)                        :: filename_ub
+    character(CX)                        :: filename_next
+    character(CX)                        :: filename_prev
     logical                              :: find_bounds
     character(*), parameter              :: subname = '(shr_strdata_readLBUB) '
     character(*), parameter              :: F00   = "('(shr_strdata_readLBUB) ',8a)"
@@ -1432,7 +1453,7 @@ contains
     ! local variables
     integer                  :: stream_nlev
     type(ESMF_Field)         :: field_dst, field_vector_dst
-    character(CL)            :: currfile
+    character(CX)            :: currfile
     logical                  :: fileexists
     logical                  :: fileopen
     type(file_desc_t)        :: pioid
@@ -1933,6 +1954,7 @@ contains
     character(*), parameter :: F00  = "('(shr_strdata_set_stream_iodesc) ',a,i8,2x,i8,2x,a)"
     character(*), parameter :: F01  = "('(shr_strdata_set_stream_iodesc) ',a,i8,2x,i8,2x,a)"
     character(*), parameter :: F02  = "('(shr_strdata_set_stream_iodesc) ',a,i8,2x,i8,2x,i8,2x,a)"
+    character(*), parameter :: F03  = "('(shr_strdata_set_stream_iodesc) ',a,i8,2x,a)"
     !-------------------------------------------------------------------------------
 
     rc = ESMF_SUCCESS
@@ -1982,13 +2004,23 @@ contains
 
     ! determine io descriptor
     if (ndims == 2) then
-       if (sdat%mainproc) then
-          write(sdat%stream(1)%logunit,F00) 'setting iodesc for : '//trim(fldname)// &
-               ' with dimlens(1), dimlens2 = ',dimlens(1),dimlens(2),&
-               ' variable has no time dimension '
+       rcode = pio_inq_dimname(pioid, dimids(ndims), dimname)
+       if (trim(dimname) == 'time' .or. trim(dimname) == 'nt') then
+          if (sdat%mainproc) then
+             write(sdat%stream(1)%logunit,F03) 'setting iodesc for : '//trim(fldname)// &
+                  ' with dimlens(1) = ',dimlens(1),' and the variable has a time dimension '
+          end if
+          call pio_initdecomp(sdat%pio_subsystem, pio_iovartype, (/dimlens(1)/), compdof, &
+               per_stream%stream_pio_iodesc)
+       else
+          if (sdat%mainproc) then
+             write(sdat%stream(1)%logunit,F00) 'setting iodesc for : '//trim(fldname)// &
+                  ' with dimlens(1), dimlens(2) = ',dimlens(1),dimlens(2),&
+                  ' variable has no time dimension '
+          end if
+          call pio_initdecomp(sdat%pio_subsystem, pio_iovartype, (/dimlens(1),dimlens(2)/), compdof, &
+               per_stream%stream_pio_iodesc)
        end if
-       call pio_initdecomp(sdat%pio_subsystem, pio_iovartype, (/dimlens(1),dimlens(2)/), compdof, &
-            per_stream%stream_pio_iodesc)
 
     else if (ndims == 3) then
        rcode = pio_inq_dimname(pioid, dimids(ndims), dimname)

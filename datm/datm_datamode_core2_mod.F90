@@ -22,7 +22,6 @@ module datm_datamode_core2_mod
   use shr_const_mod    , only : shr_const_tkfrz, shr_const_pi
   use dshr_strdata_mod , only : shr_strdata_get_stream_pointer, shr_strdata_type
   use dshr_methods_mod , only : dshr_state_getfldptr, dshr_fldbun_getfldptr, dshr_fldbun_regrid, chkerr
-  use dshr_mod         , only : dshr_restart_read, dshr_restart_write
   use dshr_strdata_mod , only : shr_strdata_type
   use dshr_fldlist_mod , only : fldlist_type, dshr_fldlist_add
 
@@ -32,14 +31,14 @@ module datm_datamode_core2_mod
   public  :: datm_datamode_core2_advertise
   public  :: datm_datamode_core2_init_pointers
   public  :: datm_datamode_core2_advance
-  public  :: datm_datamode_core2_restart_write
-  public  :: datm_datamode_core2_restart_read
 
   private :: datm_get_adjustment_factors
 
   ! export state pointers
   real(r8), pointer :: Sa_u(:)       => null()
   real(r8), pointer :: Sa_v(:)       => null()
+  real(r8), pointer :: Sa_u10m(:)    => null()
+  real(r8), pointer :: Sa_v10m(:)    => null()
   real(r8), pointer :: Sa_z(:)       => null()
   real(r8), pointer :: Sa_tbot(:)    => null()
   real(r8), pointer :: Sa_ptem(:)    => null()
@@ -84,7 +83,6 @@ module datm_datamode_core2_mod
                      -1.99_R8,-0.91_R8, 1.72_R8,   2.30_R8, 1.81_R8, 1.06_R8/
 
   character(*), parameter :: nullstr = 'null'
-  character(*), parameter :: rpfile  = 'rpointer.atm'
   character(*), parameter :: u_FILE_u = &
        __FILE__
 
@@ -115,6 +113,8 @@ contains
     call dshr_fldList_add(fldsExport, 'Sa_z'       )
     call dshr_fldList_add(fldsExport, 'Sa_u'       )
     call dshr_fldList_add(fldsExport, 'Sa_v'       )
+    call dshr_fldList_add(fldsExport, 'Sa_u10m'    )
+    call dshr_fldList_add(fldsExport, 'Sa_v10m'    )
     call dshr_fldList_add(fldsExport, 'Sa_ptem'    )
     call dshr_fldList_add(fldsExport, 'Sa_dens'    )
     call dshr_fldList_add(fldsExport, 'Sa_pslv'    )
@@ -219,6 +219,10 @@ contains
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Sa_v'       , fldptr1=Sa_v       , rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    call dshr_state_getfldptr(exportState, 'Sa_u10m'    , fldptr1=Sa_u10m    , rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    call dshr_state_getfldptr(exportState, 'Sa_v10m'    , fldptr1=Sa_v10m    , rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Sa_tbot'    , fldptr1=Sa_tbot    , rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call dshr_state_getfldptr(exportState, 'Sa_pbot'    , fldptr1=Sa_pbot    , rc=rc)
@@ -315,6 +319,10 @@ contains
        Sa_u(n) = uprime*cos(winddFactor(n)*degtorad) - vprime*sin(winddFactor(n)*degtorad)
        Sa_v(n) = uprime*sin(winddFactor(n)*degtorad) + vprime*cos(winddFactor(n)*degtorad)
 
+       ! Set Sa_u10m and Sa_v10m to Sa_u and Sa_v
+       Sa_u10m(n) = Sa_u(n)
+       Sa_v10m(n) = Sa_v(n)
+
        !--- density and pslv taken directly from input stream, set pbot ---
        Sa_pbot(n) = Sa_pslv(n)
 
@@ -396,41 +404,6 @@ contains
     end if
 
   end subroutine datm_datamode_core2_advance
-
-  !===============================================================================
-  subroutine datm_datamode_core2_restart_write(case_name, inst_suffix, ymd, tod, &
-       logunit, my_task, sdat)
-
-    ! input/output variables
-    character(len=*)            , intent(in)    :: case_name
-    character(len=*)            , intent(in)    :: inst_suffix
-    integer                     , intent(in)    :: ymd       ! model date
-    integer                     , intent(in)    :: tod       ! model sec into model date
-    integer                     , intent(in)    :: logunit
-    integer                     , intent(in)    :: my_task
-    type(shr_strdata_type)      , intent(inout) :: sdat
-    !-------------------------------------------------------------------------------
-
-    call dshr_restart_write(rpfile, case_name, 'datm', inst_suffix, ymd, tod, &
-         logunit, my_task, sdat)
-
-  end subroutine datm_datamode_core2_restart_write
-
-  !===============================================================================
-  subroutine datm_datamode_core2_restart_read(rest_filem, inst_suffix, logunit, my_task, mpicom, sdat)
-
-    ! input/output arguments
-    character(len=*)            , intent(inout) :: rest_filem
-    character(len=*)            , intent(in)    :: inst_suffix
-    integer                     , intent(in)    :: logunit
-    integer                     , intent(in)    :: my_task
-    integer                     , intent(in)    :: mpicom
-    type(shr_strdata_type)      , intent(inout) :: sdat
-    !-------------------------------------------------------------------------------
-
-    call dshr_restart_read(rest_filem, rpfile, inst_suffix, nullstr, logunit, my_task, mpicom, sdat)
-
-  end subroutine datm_datamode_core2_restart_read
 
   !===============================================================================
   subroutine datm_get_adjustment_factors(sdat, fileName_mesh, fileName_data, windF, winddF, qsatF, rc)
