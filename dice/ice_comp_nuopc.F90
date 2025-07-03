@@ -26,8 +26,7 @@ module cdeps_dice_comp
   use NUOPC_Model          , only : NUOPC_ModelGet, SetVM
   use shr_kind_mod         , only : r8=>shr_kind_r8, cxx=>shr_kind_cxx, cl=>shr_kind_cl, cs=>shr_kind_cs
   use shr_const_mod        , only : shr_const_pi
-  use shr_log_mod         , only : shr_log_setLogUnit
-  use shr_sys_mod          , only : shr_sys_abort
+  use shr_log_mod          , only : shr_log_setLogUnit, shr_log_error
   use shr_cal_mod          , only : shr_cal_ymd2date, shr_cal_ymd2julian
   use dshr_mod             , only : dshr_model_initphase, dshr_init, dshr_mesh_init, dshr_check_restart_alarm
   use dshr_mod             , only : dshr_state_setscalar, dshr_set_runclock, dshr_log_clock_advance
@@ -219,8 +218,9 @@ contains
        read (nu,nml=dice_nml,iostat=ierr)
        close(nu)
        if (ierr > 0) then
-          write(logunit,*) 'ERROR: reading input namelist, '//trim(nlfilename)//' iostat=',ierr
-          call shr_sys_abort(subName//': namelist read error '//trim(nlfilename))
+          rc = ierr
+          call shr_log_error(subName//': namelist read error '//trim(nlfilename), rc=rc)
+          return
        end if
 
        ! write namelist input to standard out
@@ -276,14 +276,15 @@ contains
     if ( trim(datamode) == 'ssmi' .or. trim(datamode) == 'ssmi_iaf' .or. trim(datamode) == 'cplhist') then
        if (my_task == main_task) write(logunit,*) ' dice datamode = ',trim(datamode)
     else
-       call shr_sys_abort(' ERROR illegal dice datamode = '//trim(datamode))
+       call shr_log_error(' ERROR illegal dice datamode = '//trim(datamode), rc=rc)
+       return
     endif
 
     ! Advertise import and export fields
     if ( trim(datamode) == 'ssmi' .or. trim(datamode) == 'ssmi_iaf') then 
       call NUOPC_CompAttributeGet(gcomp, name='flds_i2o_per_cat', value=cvalue, rc=rc)
       if (ChkErr(rc,__LINE__,u_FILE_u)) return
-      if (isPresent .and. isSet) read(cvalue,*) flds_i2o_per_cat  ! module variable
+      read(cvalue,*) flds_i2o_per_cat  ! module variable
     endif
 
     !datamode already validated
@@ -531,9 +532,9 @@ contains
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
           select case (trim(datamode))
           case('ssmi', 'ssmi_iaf')
-             call dice_datamode_ssmi_restart_read(gcomp, restfilm, rpfile, logunit, my_task, mpicom, sdat)
+             call dice_datamode_ssmi_restart_read(restfilm, rpfile, logunit, my_task, mpicom, sdat)
           case('cplhist')
-             call dice_datamode_cplhist_restart_read(restfilm, rpfile, logunit, my_task, mpicom, sdat)
+             call dice_datamode_cplhist_restart_read(restfilm, rpfile, logunit, my_task, mpicom, sdat) 
           end select
        end if
 
@@ -587,11 +588,9 @@ contains
        case('ssmi', 'ssmi_iaf')
           call dice_datamode_ssmi_restart_write(rpfile, case_name, inst_suffix, target_ymd, target_tod, &
                logunit, my_task, sdat)
-          if (ChkErr(rc,__LINE__,u_FILE_u)) return
        case ('cplhist')
           call dice_datamode_cplhist_restart_write(rpfile, case_name, inst_suffix, target_ymd, target_tod, &
                logunit, my_task, sdat)
-          if (ChkErr(rc,__LINE__,u_FILE_u)) return
        end select
     end if
 

@@ -37,7 +37,6 @@ module dice_datamode_cplhist_mod
   real(r8), pointer :: Si_anidr(:)      => null()
   real(r8), pointer :: Si_anidf(:)      => null()
 
-  character(*) , parameter :: nullstr = 'null'
   character(*) , parameter :: u_FILE_u = &
        __FILE__
 
@@ -169,10 +168,11 @@ contains
     integer                     , intent(in)    :: logunit
     integer                     , intent(in)    :: my_task
     type(shr_strdata_type)      , intent(inout) :: sdat
+
+    ! local variables
+    integer :: rc
     !-------------------------------------------------------------------------------
 
-    integer :: rc
-    
     call dshr_restart_write(rpfile, case_name, 'dice', inst_suffix, ymd, tod, &
          logunit, my_task, sdat, rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -184,14 +184,15 @@ contains
 
     ! input/output arguments
     character(len=*)            , intent(inout) :: rest_filem
-    character(len=*)            , intent(in)    :: rpfile
+    character(len=*)            , intent(inout) :: rpfile
     integer                     , intent(in)    :: logunit
     integer                     , intent(in)    :: my_task
     integer                     , intent(in)    :: mpicom
     type(shr_strdata_type)      , intent(inout) :: sdat
-    !-------------------------------------------------------------------------------
 
+    ! local variables
     integer :: rc
+    !-------------------------------------------------------------------------------
 
     call dshr_restart_read(rest_filem, rpfile, logunit, my_task, mpicom, sdat, rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
