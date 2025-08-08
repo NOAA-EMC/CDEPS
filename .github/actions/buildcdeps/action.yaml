@@ -51,7 +51,7 @@ runs:
         echo "ESMF_ROOT=${ESMF_ROOT}"
         ls -l ${ESMFMKFILE}
         ls -l ${ESMF_ROOT}
-        ls -l ${ESMF_ROOT}/cmake
+        ls -lR ${ESMF_ROOT}/lib
         cmake ${{ inputs.cmake_flags }} ${{ inputs.src_root }}
         make VERBOSE=1
         popd
