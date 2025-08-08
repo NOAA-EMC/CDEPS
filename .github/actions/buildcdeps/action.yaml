@@ -47,6 +47,11 @@ runs:
         export ESMFMKFILE=${{ inputs.esmfmkfile }}
         export ESMF_ROOT=${{ inputs.esmf_root }}
         export PIO=${{ inputs.pio_path }}
+        echo "ESMFMKFILE=${ESMFMKFILE}"
+        echo "ESMF_ROOT=${ESMF_ROOT}"
+        ls -l ${ESMFMKFILE}
+        ls -l ${ESMF_ROOT}
+        ls -l ${ESMF_ROOT}/cmake
         cmake ${{ inputs.cmake_flags }} ${{ inputs.src_root }}
         make VERBOSE=1
         popd

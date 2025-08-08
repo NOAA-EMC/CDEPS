@@ -40,6 +40,7 @@ if (TARGET ESMF::ESMF)
   message("Target ESMF::ESMF is already found. Skip find_package ...")
 else()
   list(APPEND CMAKE_MODULE_PATH $ENV{ESMF_ROOT}/cmake)
+  message("CMAKE_MODULE_PATH is ${CMAKE_MODULE_PATH}, before find_package ESMF")
   find_package(ESMF REQUIRED)
 endif()
 
