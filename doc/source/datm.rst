@@ -11,7 +11,7 @@ referred to as its mode.
 In the case of CESM, the active model components would be: CTSM,
 POP2, MOM6, POP2, CICE5-6, WW3 and MOSART. As examples, CORE2_NYF
 (CORE2 normal year forcing) is the DATM mode used in driving
-POP2 and MOM6. On the other hand CLM_QIAN, CLMCRUJRA2024, CLMCRUNCEP, CLMGSWP3
+POP2 and MOM6. On the other hand CLM_QIAN, CLMCRUJRA2024, CLMCRUJRA2024b, CLMCRUNCEP, CLMGSWP3
 and CLM1PT are DATM modes using observational data for forcing CTSM.
 
 .. _datm-datamodes:
@@ -52,6 +52,13 @@ CORE_IAF_JRA (``datm_datamode_jra_mod.F90``)
     when coupling an active ocean model with observed atmospheric
     forcing. This mode and associated data sets implement the JRA-55
     v1.3 forcing data.
+
+JRA55do (``datm_datamode_jra_mod.F90``)
+  - Provides the JRA55-do forcing developed for driving ocean - sea ice models, 
+    when coupling an active ocean model with reanalysis surface
+    forcing. This mode and associated data sets implement the JRA-55do v1.4 to 
+    v1.6 forcing data. Note that `CORE_IAF_JRA` and `JRA55do` work exactly the
+    same way.
 
 ERA5 (``datm_datamode_era5_mod.F90``)
   - Fifth generation ECMWF atmospheric reanalysis of the global climate.
@@ -121,6 +128,12 @@ DATM%CLM_QIAN
    - streams: CLM_QIAN.Solar,CLM_QIAN.Precip,CLM_QIAN.TPQW
    - datamode: CLMNCEP
 
+DATM%CLMCRUJRA2024b
+   - CRUJRA atm input data (CESM I compsets)
+   - datm_mode: CLMNCEP
+   - streams: CLMCRUJRA2024b.Solar,CLMCRUJRA2024b.Precip,CLMCRUJRA2024b.TPQW
+   - datamode: CLMNCEP
+
 DATM%CLMCRUJRA2024
    - CRUJRA atm input data (CESM I compsets)
    - datm_mode: CLMNCEP
@@ -182,6 +195,9 @@ DATM_YR_START
 
 DATM_YR_START_FILENAME
    -  Start year listed in PLUMBER2 filename
+
+DATM_YR_END_FILENAME
+   -  End year listed in PLUMBER2 filename
 
 DATM_YR_END
    -  Ending year to loop data over
